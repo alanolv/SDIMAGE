@@ -6,7 +6,7 @@ def cargar_llave(archivo):
     return open(archivo, 'rb').read()
 
 # Definir la dirección del servidor y el puerto al que te quieres conectar
-server_address = ('127.0.0.1', 12345)
+server_address = ('148.220.213.26', 12345)
 
 # Crear un socket de cliente
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -22,7 +22,7 @@ try:
     fernet = Fernet(llave)
 
     # Leer la imagen desde el archivo y enviarla en bloques encriptados
-    with open("gatito1.jpg", "rb") as image_file:
+    with open("naruto.jpeg", "rb") as image_file:
         data = image_file.read(4096)
         while data:
             data_encrypted = fernet.encrypt(data)  # Encriptar los datos

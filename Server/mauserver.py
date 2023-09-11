@@ -21,7 +21,7 @@ def desencriptar(data, llave):
     return fernet.decrypt(data)
 
 # Definir la dirección del servidor y el puerto en el que escucharás conexiones
-server_address = ('127.0.0.1', 12345)
+server_address = ("148.220.215.254", 12345)
 
 # Crear un socket de servidor
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -47,7 +47,7 @@ while True:
             client_socket.send(llave)
 
             # Recibir datos del cliente
-            with open("imagen_encriptada.jpg", "ab") as image_file:
+            with open("Diagrama.jpg", "ab") as image_file:
                 data = client_socket.recv(4096)
                 while data:
                     image_file.write(data)
