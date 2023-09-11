@@ -1,7 +1,27 @@
 import socket
+from cryptography.fernet import Fernet
+
+# Funciones para encriptar
+def crear_llave():
+    return Fernet.generate_key()
+
+def guardar_llave(llave, archivo):
+    with open(archivo, 'wb') as archivo_llave:
+        archivo_llave.write(llave)
+
+def cargar_llave(archivo):
+    return open(archivo, 'rb').read()
+
+def encriptar(data, llave):
+    fernet = Fernet(llave)
+    return fernet.encrypt(data)
+
+def desencriptar(data, llave):
+    fernet = Fernet(llave)
+    return fernet.decrypt(data)
 
 # Definir la dirección del servidor y el puerto en el que escucharás conexiones
-server_address = ('localhost', 12345)
+server_address = ('127.0.0.1', 12345)
 
 # Crear un socket de servidor
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -21,18 +41,34 @@ while True:
 
     try:
         while True:
+            # Generar y enviar la clave al cliente
+            llave = crear_llave()
+            guardar_llave(llave, 'secret.key')
+            client_socket.send(llave)
+
             # Recibir datos del cliente
-            data = client_socket.recv(4096)
+            with open("imagen_encriptada.jpg", "ab") as image_file:
+                data = client_socket.recv(4096)
+                while data:
+                    image_file.write(data)
+                    data = client_socket.recv(4096)
+                print("Imagen recibida y guardada como: imagen_encriptada.jpg")
+            
             if not data:
                 break  # El cliente cerró la conexión
-            with open("imagen recibida.jpg", "ab") as image_file:
-                image_file.write(data)
-            print("imagen recibida y guardada como: imagen recibida.jpg")
-            data=data.decode('utf-8')
+            
+            # Desencriptar la imagen
+            llave = cargar_llave('secret.key')
+            with open('imagen_encriptada.jpg', 'rb') as file:
+                encriptar_data = file.read()
+            desencriptar_data = desencriptar(encriptar_data, llave)
 
-            # Enviar una respuesta al cliente
-            #response = data
-            #client_socket.send(response.encode('utf-8'))
+            # Guardar la imagen desencriptada
+            with open('imagen_desencriptada.jpg', 'wb') as file:
+                file.write(desencriptar_data)
+
+            print("Imagen recibida y desencriptada.")
+
     except Exception as e:
         print(f"Error: {e}")
     finally:
