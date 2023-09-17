@@ -1,40 +1,43 @@
+# server.py
 import socket
-
-# Definir la dirección del servidor y el puerto en el que escucharás conexiones
-server_address = ('localhost', 12345)
-
-# Crear un socket de servidor
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# Vincular el socket a la dirección y el puerto
-server_socket.bind(server_address)
-
-# Escuchar conexiones entrantes
-server_socket.listen(5)  # Acepta hasta 5 conexiones pendientes
-
-print("Esperando conexiones entrantes...")
-
-while True:
-    # Esperar una conexión entrante
-    client_socket, client_address = server_socket.accept()
-    print(f"Conexión entrante desde: {client_address}")
-
-    try:
-        while True:
-            # Recibir datos del cliente
-            data = client_socket.recv(4096)
-            if not data:
-                break  # El cliente cerró la conexión
-            with open("imagen recibida.jpg", "ab") as image_file:
-                image_file.write(data)
-            print("imagen recibida y guardada como: imagen recibida.jpg")
-            data=data.decode('utf-8')
-
-            # Enviar una respuesta al cliente
-            #response = data
-            #client_socket.send(response.encode('utf-8'))
-    except Exception as e:
-        print(f"Error: {e}")
-    finally:
-        # Cerrar el socket del cliente
-        client_socket.close()
+import struct
+def receive_file_size(sck: socket.socket):
+    # Esta función se asegura de que se reciban los bytes
+    # que indican el tamaño del archivo que será enviado,
+    # que es codificado por el cliente vía struct.pack(),
+    # función la cual genera una secuencia de bytes que
+    # representan el tamaño del archivo.
+    fmt = "<Q"
+    expected_bytes = struct.calcsize(fmt)
+    received_bytes = 0
+    stream = bytes()
+    while received_bytes < expected_bytes:
+        chunk = sck.recv(expected_bytes - received_bytes)
+        stream += chunk
+        received_bytes += len(chunk)
+    filesize = struct.unpack(fmt, stream)[0]
+    return filesize
+def receive_file(sck: socket.socket, filename):
+    # Leer primero del socket la cantidad de 
+    # bytes que se recibirán del archivo.
+    filesize = receive_file_size(sck)
+    # Abrir un nuevo archivo en donde guardar
+    # los datos recibidos.
+    with open(filename, "wb") as f:
+        received_bytes = 0
+        # Recibir los datos del archivo en bloques de
+        # 1024 bytes hasta llegar a la cantidad de
+        # bytes total informada por el cliente.
+        while received_bytes < filesize:
+            chunk = sck.recv(1024)
+            if chunk:
+                f.write(chunk)
+                received_bytes += len(chunk)
+with socket.create_server(("localhost", 6190)) as server:
+    print("Esperando al cliente...")
+    conn, address = server.accept()
+    print(f"{address[0]}:{address[1]} conectado.")
+    print("Recibiendo archivo...")
+    receive_file(conn, "imagen-recibida.png")
+    print("Archivo recibido.")
+print("Conexión cerrada.")
