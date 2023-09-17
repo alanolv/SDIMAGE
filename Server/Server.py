@@ -1,6 +1,7 @@
 # server.py
 import socket
 import struct
+import os
 
 def receive_file_size(sck: socket.socket):
     fmt = "<Q"
@@ -45,11 +46,13 @@ def decrypt_file(filename):
     fin.close()
     
 def send_file(sck: socket.socket, filename):
+    filesize = os.path.getsize(filename)
+    sck.sendall(struct.pack("<Q", filesize))
     with open(filename, "rb") as f:
-        data = f.read()
-        sck.sendall(data)
+        while read_bytes := f.read(1024):
+            sck.sendall(read_bytes)
         
-with socket.create_server(("localhost", 6190)) as server:
+with socket.create_server(("10.10.47.4", 6190)) as server:
     print("Esperando al cliente...")
     conn, address = server.accept()
     print(f"{address[0]}:{address[1]} conectado.")
