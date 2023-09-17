@@ -1,40 +1,68 @@
+# server.py
 import socket
+import struct
+import os
 
-# Definir la dirección del servidor y el puerto en el que escucharás conexiones
-server_address = ('localhost', 12345)
+def receive_file_size(sck: socket.socket):
+    fmt = "<Q"
+    expected_bytes = struct.calcsize(fmt)
+    received_bytes = 0
+    stream = bytes()
+    while received_bytes < expected_bytes:
+        chunk = sck.recv(expected_bytes - received_bytes)
+        stream += chunk
+        received_bytes += len(chunk)
+    filesize = struct.unpack(fmt, stream)[0]
+    return filesize
 
-# Crear un socket de servidor
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def receive_file(sck: socket.socket, filename):
+    filesize = receive_file_size(sck)
+    with open(filename, "wb") as f:
+        received_bytes = 0
+        while received_bytes < filesize:
+            chunk = sck.recv(1024)
+            if chunk:
+                f.write(chunk)
+                received_bytes += len(chunk)
+                
+def decrypt_file(filename):
+  
+    key = 107
+     
+    fin = open(filename, 'rb')
+     
+    image = fin.read()
+    fin.close()
 
-# Vincular el socket a la dirección y el puerto
-server_socket.bind(server_address)
+    image = bytearray(image)
+ 
+    for index, values in enumerate(image):
+        image[index] = values ^ key
+ 
+    new_filename = "decrypted_" + filename  
+    fin = open(new_filename, 'wb')
 
-# Escuchar conexiones entrantes
-server_socket.listen(5)  # Acepta hasta 5 conexiones pendientes
-
-print("Esperando conexiones entrantes...")
-
-while True:
-    # Esperar una conexión entrante
-    client_socket, client_address = server_socket.accept()
-    print(f"Conexión entrante desde: {client_address}")
-
-    try:
-        while True:
-            # Recibir datos del cliente
-            data = client_socket.recv(4096)
-            if not data:
-                break  # El cliente cerró la conexión
-            with open("imagen recibida.jpg", "ab") as image_file:
-                image_file.write(data)
-            print("imagen recibida y guardada como: imagen recibida.jpg")
-            data=data.decode('utf-8')
-
-            # Enviar una respuesta al cliente
-            #response = data
-            #client_socket.send(response.encode('utf-8'))
-    except Exception as e:
-        print(f"Error: {e}")
-    finally:
-        # Cerrar el socket del cliente
-        client_socket.close()
+    fin.write(image)
+    fin.close()
+    
+def send_file(sck: socket.socket, filename):
+    filesize = os.path.getsize(filename)
+    sck.sendall(struct.pack("<Q", filesize))
+    with open(filename, "rb") as f:
+        while read_bytes := f.read(1024):
+            sck.sendall(read_bytes)
+        
+with socket.create_server(("10.10.47.4", 6190)) as server:
+    print("Esperando al cliente...")
+    conn, address = server.accept()
+    print(f"{address[0]}:{address[1]} conectado.")
+    print("Recibiendo archivo...")
+    receive_file(conn, "image_receive.png")
+    print("Archivo recibido.")
+    print("Desencriptando archivo")
+    decrypt_file("image_receive.png")
+    print("Archivo desencriptado")
+    print("Enviando archivo desencriptado al cliente...")
+    send_file(conn, "decrypted_image_receive.png")
+    print("Archivo desencriptado enviado al cliente.")
+print("Conexión cerrada.")
